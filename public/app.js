@@ -9,6 +9,8 @@ const eloEl = document.getElementById("elo");
 const statusEl = document.getElementById("status");
 const leaderboardEl = document.getElementById("leaderboard");
 const nameInput = document.getElementById("nameInput");
+
+// These are optional because the deployed HTML may be older while Render caches.
 const onlineCountEl = document.getElementById("onlineCount");
 const ratingText = document.getElementById("ratingText");
 const chatMessages = document.getElementById("chatMessages");
@@ -30,11 +32,12 @@ let smoothedScore = 0;
 let elo = Number(localStorage.getItem("elo") || 1000);
 let playerName = localStorage.getItem("playerName") || "";
 
-eloEl.textContent = elo;
-nameInput.value = playerName;
+if (eloEl) eloEl.textContent = elo;
+if (nameInput) nameInput.value = playerName;
 
 function status(text) {
-  statusEl.textContent = text;
+  if (statusEl) statusEl.textContent = text;
+  console.log("[status]", text);
 }
 
 function send(data) {
@@ -44,6 +47,8 @@ function send(data) {
 }
 
 function addChat(name, message, mine = false) {
+  if (!chatMessages) return;
+
   const div = document.createElement("div");
   div.className = `chat-message ${mine ? "mine" : ""}`;
   div.innerHTML = `<b>${name}</b><span>${message}</span>`;
@@ -61,6 +66,8 @@ function getRating(score) {
 }
 
 function renderLeaderboard(players) {
+  if (!leaderboardEl) return;
+
   leaderboardEl.innerHTML = "";
 
   if (!players || players.length === 0) {
@@ -83,16 +90,50 @@ function renderLeaderboard(players) {
 }
 
 async function setupCamera() {
-  localStream = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: true,
-  });
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error("getUserMedia is not supported in this browser.");
+  }
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+      },
+      audio: true,
+    });
+  } catch (err) {
+    console.warn("Camera+mic failed, trying camera only:", err);
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+      },
+      audio: false,
+    });
+  }
 
   localVideo.srcObject = localStream;
-  await localVideo.play();
+  localVideo.muted = true;
+  localVideo.playsInline = true;
+  await localVideo.play().catch(() => {});
+}
+
+function cleanupPeerConnection() {
+  if (pc) {
+    pc.ontrack = null;
+    pc.onicecandidate = null;
+    pc.onnegotiationneeded = null;
+    pc.close();
+    pc = null;
+  }
 }
 
 function createPeerConnection(isInitiator) {
+  cleanupPeerConnection();
+
   pc = new RTCPeerConnection({
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
@@ -105,8 +146,16 @@ function createPeerConnection(isInitiator) {
   });
 
   pc.ontrack = event => {
+    console.log("Remote stream received");
     remoteVideo.srcObject = event.streams[0];
+    remoteVideo.playsInline = true;
     remoteVideo.play().catch(() => {});
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log("WebRTC state:", pc.connectionState);
+    if (pc.connectionState === "connected") status("Opponent video connected.");
+    if (pc.connectionState === "failed") status("Video connection failed. Try refreshing both devices.");
   };
 
   pc.onicecandidate = event => {
@@ -145,7 +194,9 @@ async function handleIce(candidate) {
 
   try {
     await pc.addIceCandidate(new RTCIceCandidate(candidate));
-  } catch {}
+  } catch (err) {
+    console.warn("ICE error:", err);
+  }
 }
 
 function distance(a, b) {
@@ -167,10 +218,19 @@ ws.onopen = () => {
   status("Connected online.");
 };
 
+ws.onerror = err => {
+  console.error("WebSocket error:", err);
+  status("Connection error. Refresh the page.");
+};
+
+ws.onclose = () => {
+  status("Disconnected. Refresh the page.");
+};
+
 ws.onmessage = async event => {
   const data = JSON.parse(event.data);
 
-  if (data.type === "online") {
+  if (data.type === "online" && onlineCountEl) {
     onlineCountEl.textContent = `${data.count} online`;
   }
 
@@ -180,7 +240,7 @@ ws.onmessage = async event => {
 
   if (data.type === "match") {
     status(`${data.mode.toUpperCase()} match found!`);
-    opponentNameEl.textContent = data.opponentName || "Opponent";
+    if (opponentNameEl) opponentNameEl.textContent = data.opponentName || "Opponent";
     createPeerConnection(data.initiator);
   }
 
@@ -203,7 +263,7 @@ ws.onmessage = async event => {
   if (data.type === "result") {
     elo = data.elo;
     localStorage.setItem("elo", elo);
-    eloEl.textContent = elo;
+    if (eloEl) eloEl.textContent = elo;
 
     if (data.draw) status("Draw!");
     else if (data.win) status("Victory! +25 ELO");
@@ -212,9 +272,10 @@ ws.onmessage = async event => {
 
   if (data.type === "opponentLeft") {
     status("Opponent disconnected.");
+    cleanupPeerConnection();
     remoteVideo.srcObject = null;
     oppScoreEl.textContent = "0.0";
-    opponentNameEl.textContent = "Opponent";
+    if (opponentNameEl) opponentNameEl.textContent = "Opponent";
   }
 };
 
@@ -235,23 +296,28 @@ function join(mode) {
 normalBtn.onclick = () => join("normal");
 rankedBtn.onclick = () => join("ranked");
 finishBtn.onclick = () => send({ type: "finish" });
-cancelBtn.onclick = () => send({ type: "cancelQueue" });
 
-sendChatBtn.onclick = () => {
-  const message = chatInput.value.trim();
-  if (!message) return;
+if (cancelBtn) {
+  cancelBtn.onclick = () => send({ type: "cancelQueue" });
+}
 
-  send({
-    type: "chat",
-    message,
+if (sendChatBtn && chatInput) {
+  sendChatBtn.onclick = () => {
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    send({
+      type: "chat",
+      message,
+    });
+
+    chatInput.value = "";
+  };
+
+  chatInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") sendChatBtn.click();
   });
-
-  chatInput.value = "";
-};
-
-chatInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") sendChatBtn.click();
-});
+}
 
 const faceMesh = new FaceMesh({
   locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
@@ -278,7 +344,7 @@ faceMesh.onResults(results => {
   smoothedScore = smoothedScore * 0.85 + score * 0.15;
 
   myScoreEl.textContent = smoothedScore.toFixed(1);
-  ratingText.textContent = getRating(smoothedScore);
+  if (ratingText) ratingText.textContent = getRating(smoothedScore);
 
   send({
     type: "score",
@@ -310,5 +376,5 @@ async function startAI() {
 
 startAI().catch(err => {
   console.error(err);
-  status("Allow camera and microphone permissions.");
+  status("Camera blocked or unsupported. Allow camera in browser settings and refresh.");
 });
