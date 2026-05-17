@@ -59,6 +59,9 @@ let recordedChunks = [];
 let musicOn = false;
 let audioCtx = null;
 let musicOsc = null;
+let meltBaseline = null;
+let previousNose = null;
+let baselineFrames = 0;
 
 if (eloEl) eloEl.textContent = elo;
 if (nameInput) nameInput.value = playerName;
@@ -119,11 +122,11 @@ function addChat(name, message, mine = false) {
 
 function getRating(score) {
   if (score >= 9.5) return "🔥 Chudmaxxer";
-  if (score >= 8) return "💎 Elite";
+  if (score >= 8) return "💎 Elite Melt";
   if (score >= 6) return "⚡ Meltmaxxer";
-  if (score >= 4) return "😎 Casual";
-  if (score >= 2) return "🟡 Rookie";
-  return "🌀 Beginner";
+  if (score >= 4) return "😎 Locked In";
+  if (score >= 2) return "🟡 Warming Up";
+  return "🌀 Not Melted";
 }
 
 function renderLeaderboard(players) {
@@ -207,14 +210,44 @@ function distance(a, b) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+// Meltmaxxing score: based on expression intensity, energy, motion, and camera control.
+// It does NOT score looks, attractiveness, jawline, symmetry, race, gender, or identity.
 function getMeltScore(lm) {
-  const jaw = distance(lm[152], lm[10]);
-  const symmetry = 1 - Math.abs(lm[234].x - (1 - lm[454].x));
-  const eyes = distance(lm[159], lm[145]) + distance(lm[386], lm[374]);
-  const mouth = distance(lm[61], lm[291]);
-  const headCenter = Math.max(0, 1 - Math.abs(lm[1].x - 0.5) * 2);
-  const raw = jaw * 110 + symmetry * 35 + eyes * 75 + mouth * 35 + headCenter * 12;
-  return Math.max(0, Math.min(10, raw));
+  const faceWidth = Math.max(0.001, distance(lm[234], lm[454]));
+  const nose = lm[1];
+
+  const mouthOpen = distance(lm[13], lm[14]) / faceWidth;
+  const mouthWidth = distance(lm[61], lm[291]) / faceWidth;
+  const eyeOpen = (distance(lm[159], lm[145]) + distance(lm[386], lm[374])) / faceWidth;
+  const center = Math.abs(nose.x - 0.5);
+
+  if (!meltBaseline) {
+    meltBaseline = { mouthOpen, mouthWidth, eyeOpen };
+  }
+
+  baselineFrames++;
+  const learningRate = baselineFrames < 45 ? 0.08 : 0.01;
+  meltBaseline.mouthOpen = meltBaseline.mouthOpen * (1 - learningRate) + mouthOpen * learningRate;
+  meltBaseline.mouthWidth = meltBaseline.mouthWidth * (1 - learningRate) + mouthWidth * learningRate;
+  meltBaseline.eyeOpen = meltBaseline.eyeOpen * (1 - learningRate) + eyeOpen * learningRate;
+
+  const mouthEnergy = clamp((mouthOpen - meltBaseline.mouthOpen) * 22, 0, 2.6);
+  const grinEnergy = clamp((mouthWidth - meltBaseline.mouthWidth) * 8, 0, 1.4);
+  const eyeEnergy = clamp((eyeOpen - meltBaseline.eyeOpen) * 18, 0, 2.0);
+  const cameraControl = clamp(1 - center * 2.4, 0, 1) * 1.4;
+
+  let motionEnergy = 0;
+  if (previousNose) motionEnergy = clamp(distance(nose, previousNose) * 65, 0, 1.8);
+  previousNose = { x: nose.x, y: nose.y };
+
+  const presence = clamp(faceWidth * 2.2, 0, 1.0);
+  const raw = 1.2 + mouthEnergy + grinEnergy + eyeEnergy + cameraControl + motionEnergy + presence;
+
+  return clamp(raw, 0, 10);
 }
 
 function startTimer(durationMs, startedAt) {
@@ -256,6 +289,10 @@ ws.onmessage = async event => {
   if (data.type === "spectateResult") { status(`Final: ${data.a} ${data.aScore.toFixed(1)} - ${data.bScore.toFixed(1)} ${data.b}`); }
   if (data.type === "match") {
     hideQueue();
+    smoothedScore = 0;
+    meltBaseline = null;
+    previousNose = null;
+    baselineFrames = 0;
     if (resultText) resultText.textContent = "Playing";
     status(`${data.mode.toUpperCase()} match found!`);
     if (opponentNameEl) opponentNameEl.textContent = data.opponentName || "Opponent";
@@ -352,12 +389,12 @@ faceMesh.onResults(results => {
   if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
   const lm = results.multiFaceLandmarks[0];
   const score = getMeltScore(lm);
-  smoothedScore = smoothedScore * 0.85 + score * 0.15;
+  smoothedScore = smoothedScore * 0.92 + score * 0.08;
   myScoreEl.textContent = smoothedScore.toFixed(1);
   const rating = getRating(smoothedScore);
   if (ratingText) ratingText.textContent = rating;
   send({ type: "score", score: Number(smoothedScore.toFixed(1)), rating });
-  lm.forEach(p => { ctx.beginPath(); ctx.arc(p.x * canvas.width, p.y * canvas.height, 1.5, 0, Math.PI * 2); ctx.fillStyle = "#60a5fa"; ctx.fill(); });
+  lm.forEach(p => { ctx.beginPath(); ctx.arc(p.x * canvas.width, p.y * canvas.height, 1.3, 0, Math.PI * 2); ctx.fillStyle = "#60a5fa"; ctx.fill(); });
 });
 
 async function startAI() {
