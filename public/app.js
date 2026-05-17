@@ -90,16 +90,28 @@ function hideQueue() {
   if (queueOverlay) queueOverlay.classList.add("hidden");
 }
 
+function rankEmoji(rank) {
+  const ranks = {
+    Legend: "👑🔥 Legend",
+    Diamond: "💎 Diamond",
+    Platinum: "🛡️ Platinum",
+    Gold: "🏆 Gold",
+    Silver: "🥈 Silver",
+    Bronze: "🥉 Bronze"
+  };
+  return ranks[rank] || "🥉 Bronze";
+}
+
 function updateProfile(profile) {
   if (!profile) return;
   elo = Number(profile.elo || elo);
   localStorage.setItem("elo", elo);
   if (eloEl) eloEl.textContent = elo;
-  if (rankText) rankText.textContent = profile.rank || getRankFromElo(elo);
-  if (levelText) levelText.textContent = profile.level || 1;
-  if (xpText) xpText.textContent = profile.xp || 0;
-  if (recordText) recordText.textContent = `${profile.wins || 0}W / ${profile.losses || 0}L / ${profile.draws || 0}D`;
-  if (streakText) streakText.textContent = `${profile.streak || 0} days`;
+  if (rankText) rankText.textContent = rankEmoji(profile.rank || getRankFromElo(elo));
+  if (levelText) levelText.textContent = `⭐ ${profile.level || 1}`;
+  if (xpText) xpText.textContent = `✨ ${profile.xp || 0}`;
+  if (recordText) recordText.textContent = `✅${profile.wins || 0} ❌${profile.losses || 0} ➖${profile.draws || 0}`;
+  if (streakText) streakText.textContent = `🔥 ${profile.streak || 0}`;
 }
 
 function getRankFromElo(value) {
@@ -121,12 +133,12 @@ function addChat(name, message, mine = false) {
 }
 
 function getRating(score) {
-  if (score >= 9.5) return "🔥 Chudmaxxer";
-  if (score >= 8) return "💎 Elite Melt";
-  if (score >= 6) return "⚡ Meltmaxxer";
-  if (score >= 4) return "😎 Locked In";
-  if (score >= 2) return "🟡 Warming Up";
-  return "🌀 Not Melted";
+  if (score >= 9.5) return "🫠👑 10/10";
+  if (score >= 8) return "🫠🔥 9/10";
+  if (score >= 6) return "🐢💀 7/10";
+  if (score >= 4) return "😬📉 5/10";
+  if (score >= 2) return "🙂↘️ 3/10";
+  return "🧍 1/10";
 }
 
 function renderLeaderboard(players) {
@@ -139,7 +151,7 @@ function renderLeaderboard(players) {
   players.forEach((p, i) => {
     const row = document.createElement("div");
     row.className = "leader-row";
-    row.innerHTML = `<div><span>#${i + 1} ${p.name}</span><small>${p.rank || "Bronze"} • Lv ${p.level || 1}</small></div><b>${p.elo}</b>`;
+    row.innerHTML = `<div><span>#${i + 1} ${p.name}</span><small>${rankEmoji(p.rank || "Bronze")} • ⭐ Lv ${p.level || 1}</small></div><b>${p.elo}</b>`;
     leaderboardEl.appendChild(row);
   });
 }
@@ -214,39 +226,49 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-// Meltmaxxing score: based on expression intensity, energy, motion, and camera control.
-// It does NOT score looks, attractiveness, jawline, symmetry, race, gender, or identity.
+// Meme meltmaxxing score: based on the silly tucked-chin pose + expression energy.
+// It does NOT score attractiveness, identity, race, gender, or body quality.
 function getMeltScore(lm) {
   const faceWidth = Math.max(0.001, distance(lm[234], lm[454]));
+  const faceHeight = Math.max(0.001, distance(lm[10], lm[152]));
   const nose = lm[1];
+  const chin = lm[152];
+  const forehead = lm[10];
 
   const mouthOpen = distance(lm[13], lm[14]) / faceWidth;
   const mouthWidth = distance(lm[61], lm[291]) / faceWidth;
   const eyeOpen = (distance(lm[159], lm[145]) + distance(lm[386], lm[374])) / faceWidth;
+  const chinTuck = clamp((chin.y - nose.y) / faceHeight, 0, 1.4);
+  const faceSquish = clamp(faceWidth / faceHeight, 0.55, 1.4);
+  const lowerFaceSquish = clamp((chin.y - lm[17].y) / faceHeight, 0, 0.45);
+  const headLow = clamp((nose.y - forehead.y) / faceHeight, 0, 1.1);
   const center = Math.abs(nose.x - 0.5);
 
   if (!meltBaseline) {
-    meltBaseline = { mouthOpen, mouthWidth, eyeOpen };
+    meltBaseline = { chinTuck, faceSquish, mouthOpen, mouthWidth, eyeOpen, headLow };
   }
 
   baselineFrames++;
-  const learningRate = baselineFrames < 45 ? 0.08 : 0.01;
+  const learningRate = baselineFrames < 35 ? 0.05 : 0.006;
+  meltBaseline.chinTuck = meltBaseline.chinTuck * (1 - learningRate) + chinTuck * learningRate;
+  meltBaseline.faceSquish = meltBaseline.faceSquish * (1 - learningRate) + faceSquish * learningRate;
   meltBaseline.mouthOpen = meltBaseline.mouthOpen * (1 - learningRate) + mouthOpen * learningRate;
   meltBaseline.mouthWidth = meltBaseline.mouthWidth * (1 - learningRate) + mouthWidth * learningRate;
   meltBaseline.eyeOpen = meltBaseline.eyeOpen * (1 - learningRate) + eyeOpen * learningRate;
+  meltBaseline.headLow = meltBaseline.headLow * (1 - learningRate) + headLow * learningRate;
 
-  const mouthEnergy = clamp((mouthOpen - meltBaseline.mouthOpen) * 22, 0, 2.6);
-  const grinEnergy = clamp((mouthWidth - meltBaseline.mouthWidth) * 8, 0, 1.4);
-  const eyeEnergy = clamp((eyeOpen - meltBaseline.eyeOpen) * 18, 0, 2.0);
-  const cameraControl = clamp(1 - center * 2.4, 0, 1) * 1.4;
+  const tuckScore = clamp((chinTuck - meltBaseline.chinTuck) * 18, 0, 3.4);
+  const squishScore = clamp((faceSquish - meltBaseline.faceSquish) * 7, 0, 2.4);
+  const lowerSquishScore = clamp(lowerFaceSquish * 7, 0, 1.5);
+  const headDropScore = clamp((headLow - meltBaseline.headLow) * 10, 0, 1.3);
+  const expressionScore = clamp((mouthOpen - meltBaseline.mouthOpen) * 8, 0, 0.9) + clamp((mouthWidth - meltBaseline.mouthWidth) * 3, 0, 0.7) + clamp((eyeOpen - meltBaseline.eyeOpen) * 4, 0, 0.6);
+  const cameraControl = clamp(1 - center * 2.8, 0, 1) * 0.7;
 
   let motionEnergy = 0;
-  if (previousNose) motionEnergy = clamp(distance(nose, previousNose) * 65, 0, 1.8);
+  if (previousNose) motionEnergy = clamp(distance(nose, previousNose) * 35, 0, 0.8);
   previousNose = { x: nose.x, y: nose.y };
 
-  const presence = clamp(faceWidth * 2.2, 0, 1.0);
-  const raw = 1.2 + mouthEnergy + grinEnergy + eyeEnergy + cameraControl + motionEnergy + presence;
-
+  const raw = 0.8 + tuckScore + squishScore + lowerSquishScore + headDropScore + expressionScore + cameraControl + motionEnergy;
   return clamp(raw, 0, 10);
 }
 
@@ -307,9 +329,9 @@ ws.onmessage = async event => {
   if (data.type === "result") {
     hideQueue();
     updateProfile(data.profile);
-    if (data.draw) { status("Draw!"); if (resultText) resultText.textContent = "Draw"; }
-    else if (data.win) { status("Victory!"); if (resultText) resultText.textContent = "Win"; playBeep(660); }
-    else { status("Defeat."); if (resultText) resultText.textContent = "Loss"; playBeep(220); }
+    if (data.draw) { status("Draw!"); if (resultText) resultText.textContent = "➖ Draw"; }
+    else if (data.win) { status("Victory!"); if (resultText) resultText.textContent = "🏆 Win"; playBeep(660); }
+    else { status("Defeat."); if (resultText) resultText.textContent = "💀 Loss"; playBeep(220); }
   }
   if (data.type === "opponentLeft") { hideQueue(); status("Opponent disconnected."); cleanupPeerConnection(); remoteVideo.srcObject = null; oppScoreEl.textContent = "0.0"; }
 };
@@ -389,8 +411,8 @@ faceMesh.onResults(results => {
   if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
   const lm = results.multiFaceLandmarks[0];
   const score = getMeltScore(lm);
-  smoothedScore = smoothedScore * 0.92 + score * 0.08;
-  myScoreEl.textContent = smoothedScore.toFixed(1);
+  smoothedScore = smoothedScore * 0.9 + score * 0.1;
+  myScoreEl.textContent = `${smoothedScore.toFixed(1)} 🫠`;
   const rating = getRating(smoothedScore);
   if (ratingText) ratingText.textContent = rating;
   send({ type: "score", score: Number(smoothedScore.toFixed(1)), rating });
@@ -401,6 +423,6 @@ async function startAI() {
   await setupCamera();
   const camera = new Camera(localVideo, { onFrame: async () => { await faceMesh.send({ image: localVideo }); }, width: 640, height: 480 });
   camera.start();
-  status("Camera ready. Choose a mode.");
+  status("Camera ready. Tuck your chin to meltmaxx.");
 }
 startAI().catch(err => { console.error(err); status("Camera blocked. Allow camera/mic and refresh."); });
