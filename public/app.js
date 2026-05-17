@@ -9,12 +9,21 @@ const eloEl = document.getElementById("elo");
 const statusEl = document.getElementById("status");
 const leaderboardEl = document.getElementById("leaderboard");
 const nameInput = document.getElementById("nameInput");
+const onlineCountEl = document.getElementById("onlineCount");
+const ratingText = document.getElementById("ratingText");
+const chatMessages = document.getElementById("chatMessages");
+const chatInput = document.getElementById("chatInput");
+const sendChatBtn = document.getElementById("sendChatBtn");
+const opponentNameEl = document.getElementById("opponentName");
 
 const normalBtn = document.getElementById("normalBtn");
 const rankedBtn = document.getElementById("rankedBtn");
 const finishBtn = document.getElementById("finishBtn");
+const cancelBtn = document.getElementById("cancelBtn");
 
-let ws = new WebSocket(`ws://${location.host}`);
+const socketProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+let ws = new WebSocket(`${socketProtocol}//${location.host}`);
+
 let pc = null;
 let localStream = null;
 let smoothedScore = 0;
@@ -34,6 +43,23 @@ function send(data) {
   }
 }
 
+function addChat(name, message, mine = false) {
+  const div = document.createElement("div");
+  div.className = `chat-message ${mine ? "mine" : ""}`;
+  div.innerHTML = `<b>${name}</b><span>${message}</span>`;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function getRating(score) {
+  if (score >= 9.5) return "🔥 Chudmaxxer";
+  if (score >= 8) return "💎 Elite";
+  if (score >= 6) return "⚡ Meltmaxxer";
+  if (score >= 4) return "😎 Casual";
+  if (score >= 2) return "🟡 Rookie";
+  return "🌀 Beginner";
+}
+
 function renderLeaderboard(players) {
   leaderboardEl.innerHTML = "";
 
@@ -45,7 +71,13 @@ function renderLeaderboard(players) {
   players.forEach((p, i) => {
     const row = document.createElement("div");
     row.className = "leader-row";
-    row.innerHTML = `<span>#${i + 1} ${p.name}</span><b>${p.elo}</b>`;
+    row.innerHTML = `
+      <div>
+        <span>#${i + 1} ${p.name}</span>
+        <small>${p.rank || "Bronze"}</small>
+      </div>
+      <b>${p.elo}</b>
+    `;
     leaderboardEl.appendChild(row);
   });
 }
@@ -62,7 +94,10 @@ async function setupCamera() {
 
 function createPeerConnection(isInitiator) {
   pc = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:global.stun.twilio.com:3478" }
+    ],
   });
 
   localStream.getTracks().forEach(track => {
@@ -71,6 +106,7 @@ function createPeerConnection(isInitiator) {
 
   pc.ontrack = event => {
     remoteVideo.srcObject = event.streams[0];
+    remoteVideo.play().catch(() => {});
   };
 
   pc.onicecandidate = event => {
@@ -117,26 +153,34 @@ function distance(a, b) {
 }
 
 function getMeltScore(lm) {
-  const mouthWidth = distance(lm[61], lm[291]);
-  const eyeOpen = distance(lm[159], lm[145]);
-  const nose = lm[1];
+  const jaw = distance(lm[152], lm[10]);
+  const symmetry = 1 - Math.abs(lm[234].x - (1 - lm[454].x));
+  const eyes = distance(lm[159], lm[145]) + distance(lm[386], lm[374]);
+  const mouth = distance(lm[61], lm[291]);
 
-  const energy = Math.min(mouthWidth * 900, 35);
-  const focus = Math.min(eyeOpen * 3200, 35);
-  const centered = Math.max(0, 30 - Math.abs(nose.x - 0.5) * 100);
+  const raw = jaw * 120 + symmetry * 40 + eyes * 80 + mouth * 40;
 
-  return Math.min(10, ((energy + focus + centered) / 100) * 10);
+  return Math.max(0, Math.min(10, raw));
 }
 
-ws.onopen = () => status("Connected. Choose a mode.");
+ws.onopen = () => {
+  status("Connected online.");
+};
 
 ws.onmessage = async event => {
   const data = JSON.parse(event.data);
 
-  if (data.type === "waiting") status(`Waiting for ${data.mode} opponent...`);
+  if (data.type === "online") {
+    onlineCountEl.textContent = `${data.count} online`;
+  }
+
+  if (data.type === "waiting") {
+    status(`Searching ${data.mode} match...`);
+  }
 
   if (data.type === "match") {
     status(`${data.mode.toUpperCase()} match found!`);
+    opponentNameEl.textContent = data.opponentName || "Opponent";
     createPeerConnection(data.initiator);
   }
 
@@ -152,20 +196,25 @@ ws.onmessage = async event => {
     renderLeaderboard(data.leaderboard);
   }
 
+  if (data.type === "chat") {
+    addChat(data.name, data.message, data.name === playerName);
+  }
+
   if (data.type === "result") {
     elo = data.elo;
     localStorage.setItem("elo", elo);
     eloEl.textContent = elo;
 
     if (data.draw) status("Draw!");
-    else if (data.win) status("You won! +25 ELO");
-    else status("You lost! -25 ELO");
+    else if (data.win) status("Victory! +25 ELO");
+    else status("Defeat! -25 ELO");
   }
 
   if (data.type === "opponentLeft") {
-    status("Opponent left.");
+    status("Opponent disconnected.");
     remoteVideo.srcObject = null;
     oppScoreEl.textContent = "0.0";
+    opponentNameEl.textContent = "Opponent";
   }
 };
 
@@ -186,6 +235,23 @@ function join(mode) {
 normalBtn.onclick = () => join("normal");
 rankedBtn.onclick = () => join("ranked");
 finishBtn.onclick = () => send({ type: "finish" });
+cancelBtn.onclick = () => send({ type: "cancelQueue" });
+
+sendChatBtn.onclick = () => {
+  const message = chatInput.value.trim();
+  if (!message) return;
+
+  send({
+    type: "chat",
+    message,
+  });
+
+  chatInput.value = "";
+};
+
+chatInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") sendChatBtn.click();
+});
 
 const faceMesh = new FaceMesh({
   locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
@@ -210,11 +276,14 @@ faceMesh.onResults(results => {
   const score = getMeltScore(lm);
 
   smoothedScore = smoothedScore * 0.85 + score * 0.15;
+
   myScoreEl.textContent = smoothedScore.toFixed(1);
+  ratingText.textContent = getRating(smoothedScore);
 
   send({
     type: "score",
     score: Number(smoothedScore.toFixed(1)),
+    rating: getRating(smoothedScore),
   });
 
   lm.forEach(p => {
@@ -241,5 +310,5 @@ async function startAI() {
 
 startAI().catch(err => {
   console.error(err);
-  status("Camera blocked. Allow webcam/mic permissions.");
+  status("Allow camera and microphone permissions.");
 });
