@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MeltMaxxing Battle</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🔥 MeltMaxxing Battle</h1>
+    <p>AI expression battle + live opponent video</p>
+  </header>
+
+  <section class="controls">
+    <input id="nameInput" placeholder="Username" maxlength="20">
+    <button id="normalBtn">Normal Mode</button>
+    <button id="rankedBtn">Ranked Mode</button>
+    <button id="finishBtn">Finish Match</button>
+  </section>
+
+  <section class="scores">
+    <div><span>Your Melt</span><b id="myScore">0.0</b></div>
+    <div><span>Opponent Melt</span><b id="oppScore">0.0</b></div>
+    <div><span>ELO</span><b id="elo">1000</b></div>
+  </section>
+
+  <div id="status">Choose a mode</div>
+
+  <main>
+    <section class="videos">
+      <div class="video-card">
+        <h2>You</h2>
+        <video id="localVideo" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="video-card">
+        <h2>Opponent</h2>
+        <video id="remoteVideo" autoplay playsinline></video>
+      </div>
+    </section>
+
+    <aside>
+      <h2>🏆 Global Leaderboard</h2>
+      <div id="leaderboard"></div>
+    </aside>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
