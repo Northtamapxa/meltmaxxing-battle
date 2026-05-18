@@ -43,14 +43,6 @@ const recordBtn = document.getElementById("recordBtn");
 const musicBtn = document.getElementById("musicBtn");
 const muteBtn = document.getElementById("muteBtn");
 
-const ICON_BASE = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/";
-function icon(code, label = "") {
-  return `<img class="net-icon" src="${ICON_BASE}${code}.svg" alt="${label}" loading="lazy">`;
-}
-function iconText(code, text, label = text) {
-  return `${icon(code, label)} <span>${text}</span>`;
-}
-
 const socketProtocol = location.protocol === "https:" ? "wss:" : "ws:";
 let ws = new WebSocket(`${socketProtocol}//${location.host}`);
 
@@ -98,24 +90,24 @@ function hideQueue() {
   if (queueOverlay) queueOverlay.classList.add("hidden");
 }
 
-function rankIcon(rank) {
+function rankLabel(rank) {
   const name = String(rank || "Bronze").toLowerCase();
-  if (name.includes("omega")) return iconText("1f6e1", "Omega Knight", "shield");
-  if (name.includes("mythic")) return iconText("1f409", "Mythic Mogger", "dragon");
-  if (name.includes("final")) return iconText("1f451", "Final Boss", "crown");
-  if (name.includes("aura")) return iconText("1f48e", "Aura Emperor", "diamond");
-  if (name.includes("rizz baron")) return iconText("1f525", "Rizz Baron", "fire");
-  if (name.includes("looksmax")) return iconText("26a1", "Looksmax Lord", "lightning");
-  if (name.includes("mog intern")) return iconText("1f9ea", "Mog Intern", "test tube");
-  if (name.includes("rizzlet")) return iconText("1f949", "Rizzlet", "medal");
-  if (name.includes("npc")) return iconText("1f9cd", "NPC Spawn", "person");
-  if (name.includes("sub")) return iconText("1f400", "Sub Maxxer", "rat");
-  if (name.includes("legend")) return iconText("1f451", "Legend", "crown");
-  if (name.includes("diamond")) return iconText("1f48e", "Diamond", "diamond");
-  if (name.includes("platinum")) return iconText("1f6e1", "Platinum", "shield");
-  if (name.includes("gold")) return iconText("1f3c6", "Gold", "trophy");
-  if (name.includes("silver")) return iconText("1f948", "Silver", "silver medal");
-  return iconText("1f949", "Bronze", "bronze medal");
+  if (name.includes("omega")) return "🛡️ Omega Knight";
+  if (name.includes("mythic")) return "🐉 Mythic Mogger";
+  if (name.includes("final")) return "👑 Final Boss";
+  if (name.includes("aura")) return "💎 Aura Emperor";
+  if (name.includes("rizz baron")) return "🔥 Rizz Baron";
+  if (name.includes("looksmax")) return "⚡ Looksmax Lord";
+  if (name.includes("mog intern")) return "🧪 Mog Intern";
+  if (name.includes("rizzlet")) return "🥉 Rizzlet";
+  if (name.includes("npc")) return "🧍 NPC Spawn";
+  if (name.includes("sub")) return "🐀 Sub Maxxer";
+  if (name.includes("legend")) return "👑 Legend";
+  if (name.includes("diamond")) return "💎 Diamond";
+  if (name.includes("platinum")) return "🛡️ Platinum";
+  if (name.includes("gold")) return "🏆 Gold";
+  if (name.includes("silver")) return "🥈 Silver";
+  return "🥉 Bronze";
 }
 
 function updateProfile(profile) {
@@ -123,11 +115,11 @@ function updateProfile(profile) {
   elo = Number(profile.elo || elo);
   localStorage.setItem("elo", elo);
   if (eloEl) eloEl.textContent = elo;
-  if (rankText) rankText.innerHTML = rankIcon(profile.rank || getRankFromElo(elo));
-  if (levelText) levelText.innerHTML = `${icon("2b50", "level")} ${profile.level || 1}`;
-  if (xpText) xpText.innerHTML = `${icon("2728", "xp")} ${profile.xp || 0}`;
-  if (recordText) recordText.innerHTML = `${icon("2705", "wins")} ${profile.wins || 0} ${icon("274c", "losses")} ${profile.losses || 0} ${icon("2796", "draws")} ${profile.draws || 0}`;
-  if (streakText) streakText.innerHTML = `${icon("1f525", "streak")} ${profile.streak || 0}`;
+  if (rankText) rankText.textContent = rankLabel(profile.rank || getRankFromElo(elo));
+  if (levelText) levelText.textContent = `⭐ ${profile.level || 1}`;
+  if (xpText) xpText.textContent = `✨ ${profile.xp || 0}`;
+  if (recordText) recordText.textContent = `✅${profile.wins || 0} ❌${profile.losses || 0} ➖${profile.draws || 0}`;
+  if (streakText) streakText.textContent = `🔥 ${profile.streak || 0}`;
 }
 
 function getRankFromElo(value) {
@@ -153,12 +145,12 @@ function addChat(name, message, mine = false) {
 }
 
 function getRating(score) {
-  if (score >= 9.5) return iconText("1f9a0", "10/10", "melting face");
-  if (score >= 8) return iconText("1f525", "9/10", "fire");
-  if (score >= 6) return iconText("1f422", "7/10", "turtle");
-  if (score >= 4) return iconText("1f62c", "5/10", "grimace");
-  if (score >= 2) return iconText("1f642", "3/10", "smile");
-  return iconText("1f9cd", "1/10", "person");
+  if (score >= 9.5) return "🫠👑 10/10";
+  if (score >= 8) return "🫠🔥 9/10";
+  if (score >= 6) return "🐢💀 7/10";
+  if (score >= 4) return "😬📉 5/10";
+  if (score >= 2) return "🙂↘️ 3/10";
+  return "🧍 1/10";
 }
 
 function renderLeaderboard(players) {
@@ -171,7 +163,7 @@ function renderLeaderboard(players) {
   players.forEach((p, i) => {
     const row = document.createElement("div");
     row.className = "leader-row";
-    row.innerHTML = `<div><span>#${i + 1} ${p.name}</span><small>${rankIcon(p.rank || "Bronze")} • ${icon("2b50", "level")} Lv ${p.level || 1}</small></div><b>${p.elo}</b>`;
+    row.innerHTML = `<div><span>#${i + 1} ${p.name}</span><small>${rankLabel(p.rank || "Bronze")} • ⭐ Lv ${p.level || 1}</small></div><b>${p.elo}</b>`;
     leaderboardEl.appendChild(row);
   });
 }
@@ -314,9 +306,9 @@ ws.onmessage = async event => {
   if (data.type === "offer") await handleOffer(data.offer);
   if (data.type === "answer") await handleAnswer(data.answer);
   if (data.type === "ice") await handleIce(data.candidate);
-  if (data.type === "opponentScore") { oppScoreEl.innerHTML = `${Number(data.score).toFixed(1)} ${icon("1f9a0", "melt")}`; if (oppRatingText) oppRatingText.innerHTML = data.rating || "—"; }
+  if (data.type === "opponentScore") { oppScoreEl.textContent = `${Number(data.score).toFixed(1)} 🫠`; if (oppRatingText) oppRatingText.textContent = data.rating || "—"; }
   if (data.type === "chat") addChat(data.name, data.message, data.name === playerName);
-  if (data.type === "result") { hideQueue(); updateProfile(data.profile); if (data.draw) { status("Draw!"); if (resultText) resultText.innerHTML = `${icon("2796", "draw")} Draw`; } else if (data.win) { status("Victory!"); if (resultText) resultText.innerHTML = `${icon("1f3c6", "win")} Win`; playBeep(660); } else { status("Defeat."); if (resultText) resultText.innerHTML = `${icon("1f480", "loss")} Loss`; playBeep(220); } }
+  if (data.type === "result") { hideQueue(); updateProfile(data.profile); if (data.draw) { status("Draw!"); if (resultText) resultText.textContent = "➖ Draw"; } else if (data.win) { status("Victory!"); if (resultText) resultText.textContent = "🏆 Win"; playBeep(660); } else { status("Defeat."); if (resultText) resultText.textContent = "💀 Loss"; playBeep(220); } }
   if (data.type === "opponentLeft") { hideQueue(); status("Opponent disconnected."); cleanupPeerConnection(); remoteVideo.srcObject = null; oppScoreEl.textContent = "0.0"; }
 };
 
@@ -345,9 +337,9 @@ faceMesh.onResults(results => {
   const lm = results.multiFaceLandmarks[0];
   const score = getMeltScore(lm);
   smoothedScore = smoothedScore * 0.9 + score * 0.1;
-  myScoreEl.innerHTML = `${smoothedScore.toFixed(1)} ${icon("1f9a0", "melt")}`;
+  myScoreEl.textContent = `${smoothedScore.toFixed(1)} 🫠`;
   const rating = getRating(smoothedScore);
-  if (ratingText) ratingText.innerHTML = rating;
+  if (ratingText) ratingText.textContent = rating;
   send({ type: "score", score: Number(smoothedScore.toFixed(1)), rating });
   lm.forEach(p => { ctx.beginPath(); ctx.arc(p.x * canvas.width, p.y * canvas.height, 1.3, 0, Math.PI * 2); ctx.fillStyle = "#60a5fa"; ctx.fill(); });
 });
