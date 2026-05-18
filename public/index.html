@@ -10,9 +10,9 @@
   <div class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">LIVE MULTIPLAYER</p>
+        <p class="eyebrow">⚡ LIVE 1V1 MOG ARENA</p>
         <h1>MeltMaxxing Battle</h1>
-        <p class="subtitle">15-second face battles, ranked ELO, private rooms, voice, chat, XP, and streaks.</p>
+        <p class="subtitle">Fast 15-second melt battles. Queue normal, climb ranked, or invite friends with a private code.</p>
       </div>
       <div class="status-stack">
         <span id="onlineCount" class="pill">0 online</span>
@@ -38,19 +38,19 @@
     <section class="mode-grid">
       <button id="normalBtn" class="mode-card normal">
         <span>Normal 1v1</span>
-        <small>Casual 15-second match</small>
+        <small>Casual battle</small>
       </button>
       <button id="rankedBtn" class="mode-card ranked">
         <span>Ranked 1v1</span>
-        <small>Real ELO + leaderboard</small>
+        <small>ELO ladder</small>
       </button>
       <button id="privateBtn" class="mode-card private">
-        <span>Create Private Room</span>
-        <small>Invite a friend with a code</small>
+        <span>Private Room</span>
+        <small>Create invite</small>
       </button>
       <button id="spectateBtn" class="mode-card spectate">
         <span>Spectate</span>
-        <small>Watch a live room by code</small>
+        <small>Watch by code</small>
       </button>
     </section>
 
@@ -79,7 +79,7 @@
         <b id="status">Loading camera...</b>
       </div>
       <div class="timer-wrap">
-        <small>Match Timer</small>
+        <small>Timer</small>
         <b id="timerText">15.0</b>
         <div class="timer-track"><div id="timerFill"></div></div>
       </div>
@@ -99,7 +99,6 @@
           <div class="video-wrap">
             <video id="localVideo" autoplay playsinline muted></video>
             <canvas id="canvas"></canvas>
-            <div class="fx-ring"></div>
           </div>
           <div class="score-line"><span>Your Melt</span><b id="myScore">0.0</b></div>
         </div>
