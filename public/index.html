@@ -6,84 +6,90 @@
   <title>MeltMaxxing Battle</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="profile.css">
-  <link rel="stylesheet" href="features.css">
   <link rel="stylesheet" href="arena-theme.css">
+  <link rel="stylesheet" href="screens.css">
 </head>
 <body>
   <div class="app-shell">
-    <header class="hero">
-      <div>
-        <p class="eyebrow">⚡ LIVE 1V1 MOG ARENA</p>
-        <h1>MeltMaxxing Battle</h1>
-        <p class="subtitle">Fast 15-second melt battles. Queue normal, climb ranked, or invite friends with a private code.</p>
+    <section id="menuScreen" class="menu-screen">
+      <div class="menu-topline">
+        <button class="tiny-help">How to mog?</button>
+        <span class="season-pill">Season 1</span>
       </div>
-      <div class="status-stack">
-        <span id="onlineCount" class="pill">0 online</span>
-        <span id="connectionPill" class="pill dim">Connecting</span>
-        <div class="account-strip">
-          <img id="profileAvatar" src="https://api.dicebear.com/8.x/initials/svg?seed=Player" alt="Profile">
-          <div><b id="accountName">Guest</b><small id="accountStatus">Ranked locked</small></div>
-          <button id="loginBtn">Google</button>
-          <button id="settingsBtn">⚙</button>
-        </div>
-      </div>
-    </header>
 
-    <section class="panel profile-panel">
-      <div class="field-wrap">
-        <label>Username</label>
+      <div class="menu-brand">MeltMaxxing Battle</div>
+      <p class="menu-subtitle">Tuck your chin. Melt harder. Climb the arena.</p>
+
+      <div class="account-strip menu-account">
+        <img id="profileAvatar" src="https://api.dicebear.com/8.x/initials/svg?seed=Player" alt="Profile">
+        <div><b id="accountName">Guest</b><small id="accountStatus">Ranked locked</small></div>
+        <button id="loginBtn">Google</button>
+        <button id="settingsBtn">⚙</button>
+      </div>
+
+      <section class="mode-grid menu-cards">
+        <button id="normalBtn" class="mode-card normal"><span>1v1 Arena</span><small>Ranked matchmaking</small></button>
+        <button id="rankedBtn" class="mode-card ranked"><span>The Lab</span><small>Solo calibration</small></button>
+        <button id="spectateBtn" class="mode-card spectate"><span>Global Rank</span><small>Top moggers</small></button>
+        <button id="privateBtn" class="mode-card private"><span>Private Room</span><small>Generate code</small></button>
+      </section>
+
+      <section class="panel room-panel menu-room">
+        <div class="field-wrap small-field"><label>Have a code?</label><input id="roomCodeInput" placeholder="ABCDE" maxlength="8"></div>
+        <button id="joinPrivateBtn" class="mini-btn">Join</button>
+        <button id="cancelBtn" class="mini-btn danger">Cancel</button>
+        <div id="inviteCode" class="invite-code">No invite yet</div>
+      </section>
+
+      <section class="social-grid">
+        <div>Discord <span>Join server</span></div>
+        <div>TikTok <span>Follow</span></div>
+        <div>Instagram <span>Follow</span></div>
+        <div>Reddit <span>Follow</span></div>
+        <div>YouTube <span>Follow</span></div>
+        <div>X / Twitter <span>Follow</span></div>
+      </section>
+
+      <div class="hidden-support">
+        <span id="onlineCount">0 online</span>
+        <span id="connectionPill">Connecting</span>
         <input id="nameInput" placeholder="Enter username" maxlength="20">
-      </div>
-      <div class="profile-grid">
-        <div><small>ELO</small><b id="elo">500</b></div>
-        <div><small>Rank</small><b id="rankText">Bronze</b></div>
-        <div><small>Level</small><b id="levelText">1</b></div>
-        <div><small>XP</small><b id="xpText">0</b></div>
-        <div><small>Record</small><b id="recordText">0W / 0L / 0D</b></div>
-        <div><small>Streak</small><b id="streakText">0 days</b></div>
+        <b id="elo">500</b><b id="rankText">Bronze</b><b id="levelText">1</b><b id="xpText">0</b><b id="recordText">0W / 0L / 0D</b><b id="streakText">0 days</b>
+        <button id="partyBtn">Party</button>
+        <button id="musicBtn">Music: Off</button>
+        <button id="muteBtn">Voice: On</button>
+        <button id="recordBtn">Record Clip</button>
+        <a id="clipDownload" class="hidden" download="meltmaxxing-clip.webm">Download Clip</a>
       </div>
     </section>
 
-    <section class="mode-grid">
-      <button id="normalBtn" class="mode-card normal"><span>1v1 Arena</span><small>Ranked matchmaking</small></button>
-      <button id="rankedBtn" class="mode-card ranked"><span>The Lab</span><small>Solo calibration</small></button>
-      <button id="privateBtn" class="mode-card private"><span>Private Room</span><small>Generate code</small></button>
-      <button id="spectateBtn" class="mode-card spectate"><span>Global Rank</span><small>Watch by code</small></button>
+    <section id="matchScreen" class="match-screen hidden">
+      <div class="match-topbar">
+        <div class="mini-score"><small>Overall score</small><b id="myScore">0.0</b><span id="ratingText">Scanning</span></div>
+        <div class="center-status"><b id="status">Loading camera...</b><span id="timerText">15.0</span></div>
+        <div class="mini-score right"><small>Enemy scan</small><b id="oppScore">0.0</b><span id="oppRatingText">Waiting</span></div>
+      </div>
+
+      <section class="arena">
+        <div class="video-card you-card"><div class="video-head"><h2>You</h2></div><div class="video-wrap"><video id="localVideo" autoplay playsinline muted></video><canvas id="canvas"></canvas></div></div>
+        <div class="versus">VS</div>
+        <div class="video-card opponent-card"><div class="video-head"><h2 id="opponentName">Opponent</h2></div><div class="video-wrap"><video id="remoteVideo" autoplay playsinline></video></div></div>
+      </section>
+
+      <div class="bottom-timer"><div id="timerFill"></div></div>
+      <b id="resultText" class="result-hidden">—</b>
     </section>
 
-    <section class="panel room-panel">
-      <div class="field-wrap small-field"><label>Room / Invite Code</label><input id="roomCodeInput" placeholder="ABCDE" maxlength="8"></div>
-      <button id="joinPrivateBtn" class="mini-btn">Join Private</button>
-      <button id="partyBtn" class="mini-btn">Party Queue</button>
-      <button id="cancelBtn" class="mini-btn danger">Cancel Queue</button>
-      <div id="inviteCode" class="invite-code">No invite yet</div>
-    </section>
+    <aside class="side hidden">
+      <section class="panel leaderboard-card"><h2>Leaderboard</h2><div id="leaderboard"></div></section>
+      <section class="panel chat-card"><h2>Match Chat</h2><div id="chatMessages"></div><div class="chat-controls"><input id="chatInput" placeholder="Message..." maxlength="120"><button id="sendChatBtn">Send</button></div></section>
+    </aside>
 
     <div id="queueOverlay" class="queue-overlay hidden"><div class="queue-card"><div class="spinner"></div><h2 id="queueTitle">Searching...</h2><p id="queueSub">Finding an opponent</p></div></div>
 
     <div id="authOverlay" class="queue-overlay hidden"><div class="queue-card auth-card"><h2>Ranked requires login</h2><p>Sign in with Google to unlock ranked and save your profile.</p><button id="googleLoginBtn" class="hero-primary">Continue with Google</button><button id="closeAuthBtn" class="mini-btn">Not now</button></div></div>
 
     <aside id="settingsPanel" class="settings-panel hidden"><div class="settings-card"><button id="closeSettingsBtn" class="settings-close">×</button><h2>Profile</h2><img id="settingsAvatar" src="https://api.dicebear.com/8.x/initials/svg?seed=Player" alt="Profile"><label>Display name</label><input id="profileNameInput" placeholder="Display name"><label>Profile picture URL</label><input id="pfpInput" placeholder="Paste image URL"><button id="saveProfileBtn" class="mini-btn">Save Profile</button><button id="logoutBtn" class="mini-btn danger">Logout</button></div></aside>
-
-    <section class="match-bar panel">
-      <div><small>Status</small><b id="status">Loading camera...</b></div>
-      <div class="timer-wrap"><small>Timer</small><b id="timerText">15.0</b><div class="timer-track"><div id="timerFill"></div></div></div>
-      <div><small>Result</small><b id="resultText">—</b></div>
-    </section>
-
-    <main class="layout">
-      <section class="arena">
-        <div class="video-card you-card"><div class="video-head"><h2>You</h2><span id="ratingText">Beginner</span></div><div class="video-wrap"><video id="localVideo" autoplay playsinline muted></video><canvas id="canvas"></canvas></div><div class="score-line"><span>Your Melt</span><b id="myScore">0.0</b></div></div>
-        <div class="versus">VS</div>
-        <div class="video-card opponent-card"><div class="video-head"><h2 id="opponentName">Opponent</h2><span id="oppRatingText">Waiting</span></div><div class="video-wrap"><video id="remoteVideo" autoplay playsinline></video></div><div class="score-line"><span>Opponent Melt</span><b id="oppScore">0.0</b></div></div>
-      </section>
-
-      <aside class="side">
-        <section class="panel leaderboard-card"><h2>Leaderboard</h2><div id="leaderboard"></div></section>
-        <section class="panel chat-card"><h2>Match Chat</h2><div id="chatMessages"></div><div class="chat-controls"><input id="chatInput" placeholder="Message..." maxlength="120"><button id="sendChatBtn">Send</button></div></section>
-        <section class="panel tools-card"><h2>Tools</h2><button id="recordBtn" class="mini-btn">Record Clip</button><button id="musicBtn" class="mini-btn">Music: Off</button><button id="muteBtn" class="mini-btn">Voice: On</button><a id="clipDownload" class="clip-link hidden" download="meltmaxxing-clip.webm">Download Clip</a></section>
-      </aside>
-    </main>
   </div>
 
   <script>if (localStorage.getItem("elo") === null) localStorage.setItem("elo", "500");</script>
@@ -93,6 +99,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="app.js"></script>
-  <script src="features.js"></script>
+  <script src="screens.js"></script>
 </body>
 </html>
