@@ -17,6 +17,12 @@
       <div class="status-stack">
         <span id="onlineCount" class="pill">0 online</span>
         <span id="connectionPill" class="pill dim">Connecting</span>
+        <div class="account-strip">
+          <img id="profileAvatar" src="https://api.dicebear.com/8.x/initials/svg?seed=Player" alt="Profile">
+          <div><b id="accountName">Guest</b><small id="accountStatus">Ranked locked</small></div>
+          <button id="loginBtn">Google</button>
+          <button id="settingsBtn">⚙</button>
+        </div>
       </div>
     </header>
 
@@ -42,7 +48,7 @@
       </button>
       <button id="rankedBtn" class="mode-card ranked">
         <span>Ranked 1v1</span>
-        <small>ELO ladder</small>
+        <small>Login required</small>
       </button>
       <button id="privateBtn" class="mode-card private">
         <span>Private Room</span>
@@ -72,6 +78,29 @@
         <p id="queueSub">Finding an opponent</p>
       </div>
     </div>
+
+    <div id="authOverlay" class="queue-overlay hidden">
+      <div class="queue-card auth-card">
+        <h2>Ranked requires login</h2>
+        <p>Sign in with Google to unlock ranked and save your profile.</p>
+        <button id="googleLoginBtn" class="hero-primary">Continue with Google</button>
+        <button id="closeAuthBtn" class="mini-btn">Not now</button>
+      </div>
+    </div>
+
+    <aside id="settingsPanel" class="settings-panel hidden">
+      <div class="settings-card">
+        <button id="closeSettingsBtn" class="settings-close">×</button>
+        <h2>Profile</h2>
+        <img id="settingsAvatar" src="https://api.dicebear.com/8.x/initials/svg?seed=Player" alt="Profile">
+        <label>Display name</label>
+        <input id="profileNameInput" placeholder="Display name">
+        <label>Profile picture URL</label>
+        <input id="pfpInput" placeholder="Paste image URL">
+        <button id="saveProfileBtn" class="mini-btn">Save Profile</button>
+        <button id="logoutBtn" class="mini-btn danger">Logout</button>
+      </div>
+    </aside>
 
     <section class="match-bar panel">
       <div>
@@ -148,6 +177,9 @@
       localStorage.setItem("elo", "500");
     }
   </script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="app.js"></script>
