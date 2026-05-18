@@ -3,7 +3,8 @@ const FEATURE_STATE = {
   leaderboard: [],
   history: JSON.parse(localStorage.getItem("matchHistory") || "[]"),
   lastMode: "normal",
-  quests: JSON.parse(localStorage.getItem("dailyQuests") || "null") || null
+  quests: JSON.parse(localStorage.getItem("dailyQuests") || "null") || null,
+  lastResult: null
 };
 
 function featureToday() {
@@ -13,12 +14,7 @@ function featureToday() {
 function ensureQuests() {
   const today = featureToday();
   if (!FEATURE_STATE.quests || FEATURE_STATE.quests.date !== today) {
-    FEATURE_STATE.quests = {
-      date: today,
-      play: 0,
-      ranked: 0,
-      score7: 0
-    };
+    FEATURE_STATE.quests = { date: today, play: 0, ranked: 0, score7: 0 };
     localStorage.setItem("dailyQuests", JSON.stringify(FEATURE_STATE.quests));
   }
 }
@@ -92,9 +88,8 @@ function addFeatureLayout() {
     layout.parentNode.insertBefore(grid, layout.nextSibling);
 
     const rematchBtn = document.getElementById("rematchBtn");
-    if (rematchBtn) rematchBtn.onclick = () => {
-      if (typeof join === "function") join(FEATURE_STATE.lastMode || "normal");
-    };
+    if (rematchBtn) rematchBtn.onclick = startRematch;
+
     const clearHistoryBtn = document.getElementById("clearHistoryBtn");
     if (clearHistoryBtn) clearHistoryBtn.onclick = () => {
       FEATURE_STATE.history = [];
@@ -102,6 +97,50 @@ function addFeatureLayout() {
       renderHistory();
     };
   }
+
+  if (!document.getElementById("rematchOverlay")) {
+    const overlay = document.createElement("div");
+    overlay.id = "rematchOverlay";
+    overlay.className = "rematch-overlay hidden";
+    overlay.innerHTML = `
+      <div class="rematch-card">
+        <button id="closeRematchOverlay" class="rematch-close">×</button>
+        <div id="rematchResult" class="rematch-result">Match Over</div>
+        <div id="rematchScores" class="rematch-scores">0.0 - 0.0</div>
+        <p id="rematchCopy">Queue again or go back to the lobby.</p>
+        <div class="rematch-actions">
+          <button id="screenRematchBtn" class="rematch-primary">Rematch</button>
+          <button id="screenLobbyBtn" class="rematch-secondary">Back to Lobby</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById("screenRematchBtn").onclick = startRematch;
+    document.getElementById("screenLobbyBtn").onclick = hideRematchOverlay;
+    document.getElementById("closeRematchOverlay").onclick = hideRematchOverlay;
+  }
+}
+
+function startRematch() {
+  hideRematchOverlay();
+  if (typeof join === "function") join(FEATURE_STATE.lastMode || "normal");
+}
+
+function showRematchOverlay(data) {
+  const overlay = document.getElementById("rematchOverlay");
+  if (!overlay) return;
+  FEATURE_STATE.lastResult = data;
+  const result = data.draw ? "➖ Draw" : data.win ? "🏆 You Won" : "💀 You Lost";
+  const score = `${Number(data.yourScore || 0).toFixed(1)} - ${Number(data.opponentScore || 0).toFixed(1)}`;
+  document.getElementById("rematchResult").textContent = result;
+  document.getElementById("rematchScores").textContent = score;
+  document.getElementById("rematchCopy").textContent = `Mode: ${(FEATURE_STATE.lastMode || "normal").toUpperCase()} • Want to run it back?`;
+  overlay.classList.remove("hidden");
+}
+
+function hideRematchOverlay() {
+  const overlay = document.getElementById("rematchOverlay");
+  if (overlay) overlay.classList.add("hidden");
 }
 
 const originalRenderLeaderboard = window.renderLeaderboard || renderLeaderboard;
@@ -117,7 +156,6 @@ window.renderLeaderboard = renderLeaderboard = function(players) {
   if (FEATURE_STATE.currentTab === "Today") filtered = filtered.slice(0, 5);
   if (FEATURE_STATE.currentTab === "This Week") filtered = filtered.slice(0, 8);
   if (FEATURE_STATE.currentTab === "Season") filtered = filtered.slice(0, 10);
-
   if (!filtered.length) {
     leaderboardEl.innerHTML = `<p>No ${FEATURE_STATE.currentTab.toLowerCase()} entries yet.</p>`;
     return;
@@ -188,6 +226,7 @@ updateProfile = function(profile) {
 const oldJoin = join;
 join = function(mode) {
   FEATURE_STATE.lastMode = mode;
+  hideRematchOverlay();
   oldJoin(mode);
 };
 
@@ -205,6 +244,7 @@ ws.onmessage = async function(event) {
     localStorage.setItem("matchHistory", JSON.stringify(FEATURE_STATE.history));
   }
   await oldOnMessage(event);
+  if (data.type === "result") showRematchOverlay(data);
   renderHistory();
   renderQuests();
 };
